@@ -32,11 +32,11 @@ Not yours, but you depend on them: Philipa (DB, auth, JWT), Sarah (SLA fields, a
 | PATCH | `/api/tickets/:id/status` | depends on role and current status (table below) |
 | PATCH | `/api/tickets/:id/assign` | admin |
 | GET/POST | `/api/tickets/:id/comments` | anyone who can see the ticket |
-| GET | `/api/audit-logs?action=&actorId=` | admin |
+| GET | `/api/audit-logs?action=&userId=` | admin |
 
 **Status rules** (`src/services/ticketAccess.js`):
-- support: open → in_progress → resolved (only on tickets assigned to them)
-- staff: resolved → closed (confirm the fix), or resolved → in_progress (reopen)
+- support: Open → In Progress → Resolved (only on tickets assigned to them)
+- staff: Resolved → Closed (confirm the fix), or Resolved → In Progress (reopen)
 - admin: any forward step, plus reopening
 
 **Security choice to mention in the demo:** if a user requests a ticket they can't see, the API returns **404**, not 403, so nobody can probe which ticket IDs exist (prevents IDOR enumeration).
@@ -46,11 +46,11 @@ Not yours, but you depend on them: Philipa (DB, auth, JWT), Sarah (SLA fields, a
 ### Today (Tue 13 Oct)
 1. **Agree contracts with Philipa** (15 minutes, before writing anything):
    - JWT payload is `{ sub: userId, role }`, signed with HS256 and `JWT_SECRET`.
-   - Enum values are lowercase: `staff/support/admin`, `open/in_progress/resolved/closed`, and so on.
-   - Compare `database/roland_tables.sql` with her schema and merge it into `/database`.
+   - `database/schema.sql` is the single source of truth. Roles are lowercase (`staff/support/admin`); status, priority and category are Title Case (`Open`, `In Progress`, `High`, `Hardware`).
+   - Audit actions are `LOGIN`, `LOGIN_FAILED`, `ROLE_CHANGE`, `TICKET_ASSIGNED`, `STATUS_CHANGE`.
    - She calls `audit.log(...)` on login success, login failure and role changes (see `src/services/audit.js`).
 2. Create the branch `feature/tickets-api`, then copy this code into `/backend`.
-3. Run `npm install` and `npm test`. All 19 tests should pass.
+3. Run `npm install` and `npm test`. All 20 tests should pass. The tests load `database/schema.sql` into pg-mem (minus the `updated_at` trigger, which pg-mem can't run).
 
 ### Wed 14 Oct
 4. Point `.env` at the team database, run Philipa's seed, and test with Postman/Thunder Client using a real login token.

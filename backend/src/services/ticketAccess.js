@@ -21,11 +21,11 @@ async function getVisibleTicket(user, ticketId) {
   return rows[0];
 }
 
-// Allowed status moves per role. Flow: open → in_progress → resolved → closed
+// Allowed status moves per role. Flow: Open → In Progress → Resolved → Closed
 const TRANSITIONS = {
-  support: { open: ['in_progress'], in_progress: ['resolved'] },
-  staff:   { resolved: ['closed', 'in_progress'] }, // confirm fix, or reopen
-  admin:   { open: ['in_progress', 'closed'], in_progress: ['resolved'], resolved: ['closed', 'in_progress'] },
+  support: { 'Open': ['In Progress'], 'In Progress': ['Resolved'] },
+  staff:   { 'Resolved': ['Closed', 'In Progress'] }, // confirm fix, or reopen
+  admin:   { 'Open': ['In Progress', 'Closed'], 'In Progress': ['Resolved'], 'Resolved': ['Closed', 'In Progress'] },
 };
 
 function canTransition(role, from, to) {

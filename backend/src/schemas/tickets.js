@@ -1,8 +1,11 @@
 const { z } = require('zod');
 
-const CATEGORIES = ['hardware', 'software', 'network', 'access'];
-const PRIORITIES = ['low', 'medium', 'high'];
-const STATUSES = ['open', 'in_progress', 'resolved', 'closed'];
+const { ACTIONS } = require('../services/audit');
+
+// Must match the enums in database/schema.sql
+const CATEGORIES = ['Hardware', 'Software', 'Network', 'Access'];
+const PRIORITIES = ['Low', 'Medium', 'High'];
+const STATUSES = ['Open', 'In Progress', 'Resolved', 'Closed'];
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 
@@ -26,8 +29,8 @@ const assignTicket = z.object({ assigneeId: z.number().int().positive() }).stric
 const createComment = z.object({ body: z.string().trim().min(1).max(2000) }).strict();
 
 const auditQuery = z.object({
-  action: z.string().max(50).optional(),
-  actorId: z.coerce.number().int().positive().optional(),
+  action: z.enum(Object.values(ACTIONS)).optional(),
+  userId: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });

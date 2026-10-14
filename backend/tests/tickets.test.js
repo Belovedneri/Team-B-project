@@ -2,7 +2,7 @@ const request = require('supertest');
 const { setupDb, token, auth, USERS } = require('./setup');
 const app = require('../src/app');
 
-const valid = { title: 'Printer jammed', description: 'Second floor printer jams on every page', category: 'hardware', priority: 'high' };
+const valid = { title: 'Printer jammed', description: 'Second floor printer jams on every page', category: 'Hardware', priority: 'High' };
 
 let mem;
 beforeEach(() => { mem = setupDb(); });
@@ -29,10 +29,10 @@ describe('Authentication (401)', () => {
 });
 
 describe('POST /api/tickets', () => {
-  test('staff creates a ticket; status defaults to open, owner from token', async () => {
+  test('staff creates a ticket; status defaults to Open, owner from token', async () => {
     const res = await create();
     expect(res.status).toBe(201);
-    expect(res.body.data).toMatchObject({ status: 'open', created_by: USERS.staff1, priority: 'high' });
+    expect(res.body.data).toMatchObject({ status: 'Open', created_by: USERS.staff1, priority: 'High' });
   });
   test('support cannot create tickets (403)', async () => {
     expect((await create('support')).status).toBe(403);
@@ -43,7 +43,7 @@ describe('POST /api/tickets', () => {
     expect(res.body.error.details.map(d => d.field)).toEqual(expect.arrayContaining(['category', 'title']));
   });
   test('cannot set created_by or status via body (mass assignment)', async () => {
-    const res = await create('staff1', { ...valid, created_by: 2, status: 'closed' });
+    const res = await create('staff1', { ...valid, created_by: 2, status: 'Closed' });
     expect(res.status).toBe(400);
   });
   test('SQL injection in title is stored as plain text', async () => {
@@ -71,8 +71,8 @@ describe('Visibility and ownership', () => {
   });
   test('filters by status, priority, category', async () => {
     await create();
-    await create('staff1', { ...valid, priority: 'low', category: 'network' });
-    const res = await request(app).get('/api/tickets?priority=low&category=network').set('Authorization', auth.admin);
+    await create('staff1', { ...valid, priority: 'Low', category: 'Network' });
+    const res = await request(app).get('/api/tickets?priority=Low&category=Network').set('Authorization', auth.admin);
     expect(res.body.data).toHaveLength(1);
     expect((await request(app).get('/api/tickets?status=bogus').set('Authorization', auth.admin)).status).toBe(400);
   });
@@ -93,20 +93,22 @@ describe('Assignment and status flow', () => {
     const r = await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.staff2 });
     expect(r.status).toBe(400);
   });
-  test('full flow open → in_progress → resolved → closed is audited', async () => {
+  test('full flow Open → In Progress → Resolved → Closed is audited', async () => {
     const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
     await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
 
-    expect((await patch('staff1', 'in_progress')).status).toBe(403);  // staff can't start work
-    expect((await patch('support', 'closed')).status).toBe(403);      // can't skip steps
-    expect((await patch('support', 'in_progress')).status).toBe(200);
-    expect((await patch('support', 'resolved')).status).toBe(200);
-    expect((await patch('staff1', 'closed')).status).toBe(200);       // owner confirms fix
+    expect((await patch('staff1', 'In Progress')).status).toBe(403);  // staff can't start work
+    expect((await patch('support', 'Closed')).status).toBe(403);      // can't skip steps
+    expect((await patch('support', 'In Progress')).status).toBe(200);
+    expect((await patch('support', 'Resolved')).status).toBe(200);
+    expect((await patch('staff1', 'Closed')).status).toBe(200);       // owner confirms fix
 
     const logs = await request(app).get('/api/audit-logs').set('Authorization', auth.admin);
     const actions = logs.body.data.map(l => l.action);
-    expect(actions.filter(a => a === 'STATUS_CHANGED')).toHaveLength(3);
+    expect(actions.filter(a => a === 'STATUS_CHANGE')).toHaveLength(3);
     expect(actions).toContain('TICKET_ASSIGNED');
+    const change = logs.body.data.find(l => l.action === 'STATUS_CHANGE' && l.details.to === 'Closed');
+    expect(change).toMatchObject({ user_id: USERS.staff1, entity_type: 'ticket', entity_id: id, details: { from: 'Resolved' } });
   });
 });
 
@@ -119,7 +121,7 @@ describe('Comments', () => {
     expect((await post('support')).status).toBe(201);
     expect((await post('staff2')).status).toBe(404);
     const list = await request(app).get(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1);
-    expect(list.body.data).toHaveLength(2);
+    expect(list.body.data.map(c => c.user_id)).toEqual([USERS.staff1, USERS.support]);
   });
   test('empty comment rejected', async () => {
     const id = (await create()).body.data.id;
@@ -129,6 +131,15 @@ describe('Comments', () => {
 });
 
 describe('Audit logs endpoint', () => {
+  test('filters by action and userId; unknown action rejected', async () => {
+    const id = (await create()).body.data.id;
+    await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
+    await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.support).send({ status: 'In Progress' });
+    const get = (q) => request(app).get(`/api/audit-logs?${q}`).set('Authorization', auth.admin);
+    expect((await get('action=STATUS_CHANGE')).body.data.map(l => l.user_id)).toEqual([USERS.support]);
+    expect((await get(`userId=${USERS.admin}`)).body.data.map(l => l.action)).toEqual(['TICKET_ASSIGNED']);
+    expect((await get('action=STATUS_CHANGED')).status).toBe(400);
+  });
   test('admin only', async () => {
     expect((await request(app).get('/api/audit-logs').set('Authorization', auth.staff1)).status).toBe(403);
     expect((await request(app).get('/api/audit-logs').set('Authorization', auth.support)).status).toBe(403);
