@@ -7,6 +7,11 @@ const validate = require('../middleware/validate');
 const s = require('../schemas/tickets');
 const audit = require('../services/audit');
 const { visibilityFilter, getVisibleTicket, canTransition } = require('../services/ticketAccess');
+const SLA_HOURS = {
+  High: 4,
+  Medium: 24,
+  Low: 72,
+};
 
 const router = express.Router();
 router.use(authenticate); // every ticket route requires a valid JWT
@@ -14,12 +19,17 @@ router.use(authenticate); // every ticket route requires a valid JWT
 // POST /api/tickets — staff (and admin) log a new issue
 router.post('/', authorize('staff', 'admin'), validate({ body: s.createTicket }), async (req, res) => {
   const { title, description, category, priority } = req.body;
-  // Sarah: compute due_at from priority here (High 4h, Medium 24h, Low 72h)
-  const { rows } = await db.query(
-    `INSERT INTO tickets (title, description, category, priority, created_by)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [title, description, category, priority, req.user.id]
+
+  const dueAt = new Date(
+    Date.now() + SLA_HOURS[priority] * 60 * 60 * 1000
   );
+
+  const { rows } = await db.query(
+    `INSERT INTO tickets (title, description, category, priority, created_by, due_at)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [title, description, category, priority, req.user.id, dueAt]
+  );
+
   res.status(201).json({ data: rows[0] });
 });
 
@@ -52,25 +62,58 @@ router.get('/:id', validate({ params: s.idParam }), async (req, res) => {
   res.json({ data: ticket });
 });
 
-// PATCH /api/tickets/:id/status — enforces the status flow per role
-router.patch('/:id/status', validate({ params: s.idParam, body: s.updateStatus }), async (req, res) => {
-  const ticket = await getVisibleTicket(req.user, req.params.id);
-  const { status } = req.body;
-  if (ticket.status === status) throw new AppError(400, `Ticket is already ${status}`);
-  if (!canTransition(req.user.role, ticket.status, status)) {
-    throw new AppError(403, `A ${req.user.role} cannot move a ticket from ${ticket.status} to ${status}`);
+// PATCH /api/tickets/:id/status — update ticket status
+router.patch(
+  '/:id/status',
+  validate({
+    params: s.idParam,
+    body: s.updateStatus,
+  }),
+  async (req, res) => {
+    const ticket = await getVisibleTicket(req.user, req.params.id);
+    const { status } = req.body;
+
+    if (ticket.status === status) {
+      throw new AppError(400, `Ticket is already ${status}`);
+    }
+
+    if (!canTransition(req.user.role, ticket.status, status)) {
+      throw new AppError(
+        403,
+        `A ${req.user.role} cannot move a ticket from ${ticket.status} to ${status}`
+      );
+    }
+
+    // Record the resolution time only while the ticket is Resolved.
+    // If the ticket is reopened, clear the timestamp.
+    const resolvedAt = status === 'Resolved' ? new Date() : null;
+
+    const { rows } = await db.query(
+      `UPDATE tickets
+       SET status = $1,
+           resolved_at = $3,
+           updated_at = now()
+       WHERE id = $2
+       RETURNING *`,
+      [status, ticket.id, resolvedAt]
+    );
+
+    // Preserve the existing audit logging.
+    await audit.log({
+      userId: req.user.id,
+      action: audit.ACTIONS.STATUS_CHANGE,
+      entityType: 'ticket',
+      entityId: ticket.id,
+      details: {
+        from: ticket.status,
+        to: status,
+      },
+      ip: req.ip,
+    });
+
+    res.json({ data: rows[0] });
   }
-  // Sarah: set resolved_at when status becomes 'Resolved'
-  const { rows } = await db.query(
-    `UPDATE tickets SET status = $1, updated_at = now() WHERE id = $2 RETURNING *`,
-    [status, ticket.id]
-  );
-  await audit.log({
-    userId: req.user.id, action: audit.ACTIONS.STATUS_CHANGE, entityType: 'ticket', entityId: ticket.id,
-    details: { from: ticket.status, to: status }, ip: req.ip,
-  });
-  res.json({ data: rows[0] });
-});
+);
 
 // PATCH /api/tickets/:id/assign — admin assigns to a support user
 router.patch('/:id/assign', authorize('admin'), validate({ params: s.idParam, body: s.assignTicket }), async (req, res) => {
