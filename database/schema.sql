@@ -75,7 +75,8 @@ CREATE TABLE comments (
   ticket_id   INTEGER     NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
   user_id     INTEGER     NOT NULL REFERENCES users(id),
   body        TEXT        NOT NULL,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (id, ticket_id)
 );
 CREATE INDEX idx_comments_ticket_id ON comments (ticket_id);
 
@@ -84,14 +85,15 @@ CREATE INDEX idx_comments_ticket_id ON comments (ticket_id);
 CREATE TABLE attachments (
   id           INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   ticket_id    INTEGER     NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-  comment_id   INTEGER     REFERENCES comments(id) ON DELETE CASCADE,
+  comment_id   INTEGER,
   uploaded_by  INTEGER     NOT NULL REFERENCES users(id),
   stored_name  TEXT        NOT NULL UNIQUE,      -- generated name on disk (e.g. a UUID + extension)
   mime_type    TEXT        NOT NULL
                CHECK (mime_type IN ('image/png', 'image/jpeg', 'application/pdf', 'text/plain')),
   size_bytes   INTEGER     NOT NULL
                CHECK (size_bytes > 0 AND size_bytes <= 5 * 1024 * 1024),  -- 5 MB limit
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  FOREIGN KEY (comment_id, ticket_id) REFERENCES comments (id, ticket_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_attachments_ticket_id ON attachments (ticket_id);
 
