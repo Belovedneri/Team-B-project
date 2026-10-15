@@ -128,3 +128,14 @@ padding: 24px 20px;
 }
 
 }
+
+/* Error message shown above a form */
+.form-error {
+background-color: #fdecea;
+color: #b42318;
+border: 1px solid #f5c2c0;
+border-radius: 8px;
+padding: 10px 12px;
+margin-bottom: 16px;
+font-size: 14px;
+}
