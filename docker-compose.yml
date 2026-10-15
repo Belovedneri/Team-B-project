@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: helpdesk_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: "@admin2211"
+      POSTGRES_DB: helpdesk
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+  backend:
+    build: 
+      context: ./backend
+    container_name: helpdesk_api
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD="@admin2211"
+      - DB_NAME=helpdesk
+      - JWT_SECRET=dev_secret_key_@_2026
+    depends_on:
+      - db
+    volumes:
+      
+      - ./backend:/app
+      - /app/node_modules
+
+volumes:
+  pgdata:

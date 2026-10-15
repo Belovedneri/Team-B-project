@@ -1,0 +1,130 @@
+/* Reset default browser spacing */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    }
+
+/* Page background and default text */
+body {
+font-family: Arial, sans-serif;
+background-color: #f4f6f9;
+color: #222;
+min-height: 100vh;
+}
+
+/* Center the registration card */
+.register-container {
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+padding: 24px 16px;
+}
+
+/* Registration card */
+.register-card {
+background-color: #ffffff;
+width: 100%;
+max-width: 420px;
+padding: 32px;
+border-radius: 12px;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Main heading */
+.register-card h1 {
+text-align: center;
+font-size: 28px;
+margin-bottom: 10px;
+}
+
+/* Description below the heading */
+.subtitle {
+text-align: center;
+color: #666;
+font-size: 14px;
+line-height: 1.5;
+margin-bottom: 28px;
+}
+
+/* Space between form fields */
+.form-group {
+margin-bottom: 18px;
+}
+
+/* Field labels */
+.form-group label {
+display: block;
+font-size: 14px;
+font-weight: 600;
+margin-bottom: 8px;
+}
+
+/* Input fields */
+.form-group input {
+display: block;
+width: 100%;
+padding: 12px;
+border: 1px solid #ccc;
+border-radius: 6px;
+font-size: 16px;
+}
+
+/* Highlight an input when selected */
+.form-group input:focus {
+outline: 2px solid #2563eb;
+outline-offset: 1px;
+border-color: #2563eb;
+}
+
+/* Create account button */
+button {
+display: block;
+width: 100%;
+padding: 13px;
+background-color: #2563eb;
+color: #ffffff;
+border: none;
+border-radius: 6px;
+font-size: 16px;
+font-weight: 600;
+cursor: pointer;
+}
+
+/* Button hover effect */
+button:hover {
+background-color: #1d4ed8;
+}
+
+/* Login link section */
+.login-link {
+text-align: center;
+font-size: 14px;
+line-height: 1.6;
+margin-top: 24px;
+}
+
+/* Style the login link */
+.login-link a {
+color: #2563eb;
+text-decoration: none;
+font-weight: 600;
+}
+
+.login-link a:hover {
+text-decoration: underline;
+}
+
+/* Adjust spacing for small phone screens */
+@media (max-width: 480px) {
+.register-card {
+padding: 24px 20px;
+}
+
+.register-card h1 {
+    font-size: 24px;
+}
+
+}
