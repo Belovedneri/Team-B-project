@@ -1,0 +1,56 @@
+name: Backend API Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: helpdesk_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Setup Database Schema
+        run: |
+          PGPASSWORD=ci_password psql -h localhost -U admin -d helpdesk_test -f ../database/schema.sql
+          PGPASSWORD=ci_password psql -h localhost -U admin -d helpdesk_test -f ../database/seed.sql
+
+      - name: Run Jest Tests
+        run: npm test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: admin
+          DB_PASSWORD: ci_password
+          DB_NAME: helpdesk_test
+          JWT_SECRET: ci_test_secret_key
