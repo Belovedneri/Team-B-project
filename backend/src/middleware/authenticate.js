@@ -12,6 +12,7 @@ const claimsSchema = z.object({
   // users.id is a positive Postgres INTEGER; JWT `sub` is always a string
   sub: z.string().regex(/^[1-9]\d{0,9}$/).transform(Number).refine(n => n <= 2147483647),
   role: z.enum(ROLES),
+  exp: z.number(), // jwt.verify only checks expiry when exp is present, so require it
 });
 
 const rejected = () => new AppError(401, 'Invalid or expired token');

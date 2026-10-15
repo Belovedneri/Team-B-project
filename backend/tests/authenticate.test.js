@@ -25,6 +25,11 @@ describe('JWT claim validation (401)', () => {
     expect((await get(signed(payload))).status).toBe(401);
   });
 
+  test('token with no expiry', async () => {
+    const noExp = jwt.sign({ sub: '1', role: 'staff' }, process.env.JWT_SECRET);
+    expect((await get(`Bearer ${noExp}`)).status).toBe(401);
+  });
+
   test('valid claims are accepted', async () => {
     expect((await get(auth.staff1)).status).toBe(200);
   });
