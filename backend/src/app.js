@@ -15,6 +15,7 @@ app.use('/api', apiLimiter);
 app.use('/api/auth/login', loginLimiter);           // must come BEFORE Philipa's auth router
 // app.use('/api/auth', require('./routes/auth'));  // Philipa
 app.use('/api/tickets', require('./routes/tickets'));
+app.use('/api/tickets', require('./routes/attachments')); // Sarah
 app.use('/api/audit-logs', require('./routes/audit'));
 // app.use('/api/reports', require('./routes/reports')); // Sarah
 
