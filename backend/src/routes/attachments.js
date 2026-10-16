@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const { PNG } = require('pngjs');
 const fs = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
@@ -61,13 +62,29 @@ function receiveFile(req, res, next) {
 
 // Check file contents instead of trusting the browser's MIME declaration.
 function detectMimeType(buffer) {
-  if (
-    buffer.length >= 8 &&
-    buffer.subarray(0, 8).equals(
-      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-    )
-  ) {
-    return 'image/png';
+  const pngSignature = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47,
+    0x0d, 0x0a, 0x1a, 0x0a,
+  ]);
+
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(pngSignature)) {
+    try {
+      const image = PNG.sync.read(buffer);
+
+      // Reject images with unreasonable dimensions.
+      if (
+        image.width <= 0 ||
+        image.height <= 0 ||
+        image.width * image.height > 25_000_000
+      ) {
+        return null;
+      }
+
+      return 'image/png';
+    } catch {
+      // The signature exists, but the PNG data is invalid.
+      return null;
+    }
   }
 
   if (
@@ -86,7 +103,8 @@ function detectMimeType(buffer) {
   // Plain text must be valid UTF-8 without binary control characters.
   const text = buffer.toString('utf8');
   const validUtf8 = Buffer.from(text, 'utf8').equals(buffer);
-  const hasBinaryControls = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(text);
+  const hasBinaryControls =
+    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(text);
 
   if (buffer.length > 0 && validUtf8 && !hasBinaryControls) {
     return 'text/plain';

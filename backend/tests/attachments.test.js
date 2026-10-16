@@ -1,5 +1,7 @@
+
 const request = require('supertest');
 const fs = require('fs/promises');
+const { PNG } = require('pngjs');
 const os = require('os');
 const path = require('path');
 
@@ -18,10 +20,12 @@ const valid = {
   priority: 'High',
 };
 
-// Minimal file signature used to exercise the route's PNG signature check.
-const png = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-]);
+// Generate a valid 1x1 PNG image for attachment tests.
+const png = PNG.sync.write({
+  width: 1,
+  height: 1,
+  data: Buffer.from([255, 0, 0, 255]),
+});
 
 async function createTicket(who = 'staff1') {
   const res = await request(app)
@@ -33,7 +37,12 @@ async function createTicket(who = 'staff1') {
   return res.body.data.id;
 }
 
-function upload(ticketId, who = 'staff1', buffer = png, contentType = 'image/png') {
+function upload(
+  ticketId,
+  who = 'staff1',
+  buffer = png,
+  contentType = 'image/png'
+) {
   return request(app)
     .post(`/api/tickets/${ticketId}/attachments`)
     .set('Authorization', auth[who])
@@ -57,7 +66,6 @@ afterAll(async () => {
 describe('Attachment uploads', () => {
   test('uploads a PNG and records the authenticated user', async () => {
     const ticketId = await createTicket();
-
     const res = await upload(ticketId);
 
     expect(res.status).toBe(201);
@@ -67,12 +75,26 @@ describe('Attachment uploads', () => {
       mime_type: 'image/png',
       size_bytes: png.length,
     });
+
     expect(res.body.data.downloadUrl).toBeDefined();
     expect(res.body.data.stored_name).toBeUndefined();
 
     const files = await fs.readdir(uploadDir);
     expect(files).toHaveLength(1);
     expect(files[0]).not.toBe('test-file');
+  });
+
+  test('rejects a PNG containing only the file signature', async () => {
+    const ticketId = await createTicket();
+
+    const fakePng = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47,
+      0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+
+    const res = await upload(ticketId, 'staff1', fakePng, 'image/png');
+
+    expect(res.status).toBe(400);
   });
 
   test('rejects content that does not match its declared MIME type', async () => {
