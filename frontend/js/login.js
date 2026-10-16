@@ -1,0 +1,40 @@
+const form = document.getElementById('login-form');
+const errorBox = document.getElementById('form-error');
+const submitButton = form.querySelector('button[type="submit"]');
+
+function showError(message) {
+  errorBox.textContent = message; // textContent, never innerHTML
+  errorBox.hidden = false;
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  errorBox.hidden = true;
+  submitButton.disabled = true;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: form.email.value,
+        password: form.password.value,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      showError(data.error?.message || 'Login failed. Please try again.');
+      return;
+    }
+
+    sessionStorage.setItem('token', data.token);
+    sessionStorage.setItem('user', JSON.stringify(data.user));
+    window.location.href = 'tickets.html';
+  } catch (err) {
+    showError('Cannot reach the server. Check that the backend is running.');
+  } finally {
+    submitButton.disabled = false;
+  }
+});
