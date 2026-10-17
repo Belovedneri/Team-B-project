@@ -2,7 +2,7 @@ name: Backend API Tests
 
 on:
   pull_request:
-    branches: [ main, Team-B-database ]
+    branches: [ main ]
     paths:
       - 'backend/**'
 
