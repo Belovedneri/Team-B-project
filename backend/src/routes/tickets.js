@@ -8,6 +8,262 @@ const s = require('../schemas/tickets');
 const audit = require('../services/audit');
 const { visibilityFilter, getVisibleTicket, canTransition } = require('../services/ticketAccess');
 
+/**
+ * @openapi
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *   schemas:
+ *     TicketInput:
+ *       type: object
+ *       required:
+ *         - title
+ *         - description
+ *         - category
+ *         - priority
+ *       properties:
+ *         title:
+ *           type: string
+ *           minLength: 3
+ *           maxLength: 150
+ *         description:
+ *           type: string
+ *           minLength: 10
+ *           maxLength: 5000
+ *         category:
+ *           type: string
+ *           enum: [Hardware, Software, Network, Access]
+ *         priority:
+ *           type: string
+ *           enum: [Low, Medium, High]
+ *     TicketStatusUpdate:
+ *       type: object
+ *       required: [status]
+ *       properties:
+ *         status:
+ *           type: string
+ *           enum: [Open, In Progress, Resolved, Closed]
+ *     TicketAssignment:
+ *       type: object
+ *       required: [assigneeId]
+ *       properties:
+ *         assigneeId:
+ *           type: integer
+ *           minimum: 1
+ *     CommentInput:
+ *       type: object
+ *       required: [body]
+ *       properties:
+ *         body:
+ *           type: string
+ *           minLength: 1
+ *           maxLength: 2000
+ *
+ * @openapi
+ * /api/tickets:
+ *   post:
+ *     tags: [Tickets]
+ *     summary: Create a ticket
+ *     description: Staff and admins can create tickets. The creator is taken from the authenticated user.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/TicketInput'
+ *     responses:
+ *       '201':
+ *         description: Ticket created
+ *       '400':
+ *         description: Invalid request
+ *       '401':
+ *         description: Authentication required
+ *       '403':
+ *         description: Staff or admin role required
+ *
+ *   get:
+ *     tags: [Tickets]
+ *     summary: List visible tickets
+ *     description: Returns tickets visible to the authenticated user, with optional filters and pagination.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [Open, In Progress, Resolved, Closed]
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [Low, Medium, High]
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [Hardware, Software, Network, Access]
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *     responses:
+ *       '200':
+ *         description: Tickets retrieved
+ *       '401':
+ *         description: Authentication required
+ *
+ * @openapi
+ * /api/tickets/{id}:
+ *   get:
+ *     tags: [Tickets]
+ *     summary: Get a visible ticket by ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *     responses:
+ *       '200':
+ *         description: Ticket retrieved
+ *       '401':
+ *         description: Authentication required
+ *       '404':
+ *         description: Ticket not found or not visible
+ *
+ * @openapi
+ * /api/tickets/{id}/status:
+ *   patch:
+ *     tags: [Tickets]
+ *     summary: Update ticket status
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/TicketStatusUpdate'
+ *     responses:
+ *       '200':
+ *         description: Ticket status updated
+ *       '400':
+ *         description: Invalid status or no status change
+ *       '401':
+ *         description: Authentication required
+ *       '403':
+ *         description: Status transition not allowed
+ *
+ * @openapi
+ * /api/tickets/{id}/assign:
+ *   patch:
+ *     tags: [Tickets]
+ *     summary: Assign ticket to support staff
+ *     description: Admin-only operation.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/TicketAssignment'
+ *     responses:
+ *       '200':
+ *         description: Ticket assigned
+ *       '400':
+ *         description: Assignee is not support staff
+ *       '401':
+ *         description: Authentication required
+ *       '403':
+ *         description: Admin role required
+ *       '404':
+ *         description: Ticket or assignee not found
+ *
+ * @openapi
+ * /api/tickets/{id}/comments:
+ *   get:
+ *     tags: [Tickets]
+ *     summary: List comments on a visible ticket
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *     responses:
+ *       '200':
+ *         description: Comments retrieved
+ *       '401':
+ *         description: Authentication required
+ *       '404':
+ *         description: Ticket not found or not visible
+ *
+ *   post:
+ *     tags: [Tickets]
+ *     summary: Add a comment to a visible ticket
+ *     description: Comments cannot be added to closed tickets.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CommentInput'
+ *     responses:
+ *       '201':
+ *         description: Comment created
+ *       '400':
+ *         description: Ticket is closed or comment is invalid
+ *       '401':
+ *         description: Authentication required
+ *       '404':
+ *         description: Ticket not found or not visible
+ */
+
 const router = express.Router();
 router.use(authenticate); // every ticket route requires a valid JWT
 
