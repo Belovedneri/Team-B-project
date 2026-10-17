@@ -21,6 +21,12 @@ const { auditQuery } = require('../schemas/tickets');
  *         required: false
  *         schema:
  *           type: string
+ *           enum:
+ *             - LOGIN
+ *             - LOGIN_FAILED
+ *             - ROLE_CHANGE
+ *             - TICKET_ASSIGNED
+ *             - STATUS_CHANGE
  *         description: Filter by audit action
  *       - in: query
  *         name: userId
@@ -57,11 +63,34 @@ const { auditQuery } = require('../schemas/tickets');
  *                   items:
  *                     type: object
  *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       user_id:
+ *                         type: integer
+ *                         nullable: true
  *                       user_email:
  *                         type: string
  *                         nullable: true
  *                       action:
  *                         type: string
+ *                         enum:
+ *                           - LOGIN
+ *                           - LOGIN_FAILED
+ *                           - ROLE_CHANGE
+ *                           - TICKET_ASSIGNED
+ *                           - STATUS_CHANGE
+ *                       entity_type:
+ *                         type: string
+ *                         nullable: true
+ *                       entity_id:
+ *                         type: integer
+ *                         nullable: true
+ *                       details:
+ *                         type: object
+ *                         additionalProperties: true
+ *                       ip_address:
+ *                         type: string
+ *                         nullable: true
  *                       created_at:
  *                         type: string
  *                         format: date-time
