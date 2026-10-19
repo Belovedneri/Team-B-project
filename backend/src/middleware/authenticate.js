@@ -1,6 +1,6 @@
 // Verifies the JWT Philipa's /auth/login issues. Agreed payload: { sub: String(userId), role }.
 // The token only proves identity. Every request re-reads the user, so a deactivated account
-// or a changed role takes effect immediately rather than when the token expires.
+// is locked out and a changed role takes effect immediately rather than when the token expires.
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const db = require('../config/db');
@@ -33,9 +33,8 @@ module.exports = async (req, res, next) => {
   try {
     const { rows } = await db.query('SELECT id, role, is_active FROM users WHERE id = $1', [claims.sub]);
     const user = rows[0];
-    // Unknown, deactivated, or role changed since the token was issued: force a fresh login
-    if (!user || !user.is_active || user.role !== claims.role) return next(rejected());
-    req.user = { id: user.id, role: user.role };
+    if (!user || !user.is_active) return next(rejected());
+    req.user = { id: user.id, role: user.role }; // role from the database, never the token
     next();
   } catch (err) {
     next(err); // DB failure is a 500, not a 401

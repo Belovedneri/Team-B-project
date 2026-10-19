@@ -45,7 +45,7 @@ Not yours, but you depend on them: Philipa (DB, auth, JWT), Sarah (SLA fields, a
 
 ### Today (Tue 13 Oct)
 1. **Agree contracts with Philipa** (15 minutes, before writing anything):
-   - JWT payload is `{ sub: String(userId), role }`, signed with HS256 and `JWT_SECRET`. `authenticate` re-checks the user on every request and rejects deleted, deactivated (`is_active = false`) or role-changed accounts, so they must log in again.
+   - JWT payload is `{ sub: String(userId), role }`, signed with HS256 and `JWT_SECRET`. `authenticate` re-checks the user on every request: deleted or deactivated (`is_active = false`) accounts get 401, and the role always comes from the database, so a role change takes effect on the next request.
    - `database/schema.sql` is the single source of truth. Roles are lowercase (`staff/support/admin`); status, priority and category are Title Case (`Open`, `In Progress`, `High`, `Hardware`).
    - Audit actions are `LOGIN`, `LOGIN_FAILED`, `ROLE_CHANGE`, `TICKET_ASSIGNED`, `STATUS_CHANGE`.
    - She calls `audit.log(...)` on login success, login failure and role changes (see `src/services/audit.js`).

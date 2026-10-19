@@ -44,13 +44,23 @@ describe('Account state is checked on every request (401)', () => {
     mem.public.none(`UPDATE users SET is_active = false WHERE id = ${USERS.staff1}`);
     expect((await get(auth.staff1)).status).toBe(401);
   });
+});
 
-  test('demoted admin cannot keep using an admin token', async () => {
-    mem.public.none(`UPDATE users SET role = 'staff' WHERE id = ${USERS.admin}`);
-    expect((await get(auth.admin)).status).toBe(401);
+describe('Role comes from the database, not the token', () => {
+  const auditLogs = (authHeader) => request(app).get('/api/audit-logs').set('Authorization', authHeader);
+
+  test('promoted user gets the new role without logging in again', async () => {
+    expect((await auditLogs(auth.staff2)).status).toBe(403);
+    mem.public.none(`UPDATE users SET role = 'admin' WHERE id = ${USERS.staff2}`);
+    expect((await auditLogs(auth.staff2)).status).toBe(200);
   });
 
-  test('token claiming a role the user does not have', async () => {
-    expect((await get(`Bearer ${token(USERS.staff1, 'admin')}`)).status).toBe(401);
+  test('demoted admin loses admin access with an old admin token', async () => {
+    mem.public.none(`UPDATE users SET role = 'staff' WHERE id = ${USERS.admin}`);
+    expect((await auditLogs(auth.admin)).status).toBe(403);
+  });
+
+  test('token claiming a role the user does not have grants nothing extra', async () => {
+    expect((await auditLogs(`Bearer ${token(USERS.staff1, 'admin')}`)).status).toBe(403);
   });
 });
