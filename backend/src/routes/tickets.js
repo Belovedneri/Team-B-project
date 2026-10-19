@@ -173,11 +173,13 @@ const { visibilityFilter, getVisibleTicket, canTransition } = require('../servic
  *       '200':
  *         description: Ticket status updated
  *       '400':
- *         description: Invalid status or no status change
+ *         description: Invalid request or ticket already has the requested status
  *       '401':
  *         description: Authentication required
  *       '403':
- *         description: Status transition not allowed
+ *         description: Status transition not allowed for the user's role
+ *       '404':
+ *         description: Ticket not found or not visible to the authenticated user
  *
  * @openapi
  * /api/tickets/{id}/assign:
