@@ -37,7 +37,8 @@ Not yours, but you depend on them: Philipa (DB, auth, JWT), Sarah (SLA fields, a
 **Status rules** (`src/services/ticketAccess.js`):
 - support: Open → In Progress → Resolved (only on tickets assigned to them)
 - staff: Resolved → Closed (confirm the fix), or Resolved → In Progress (reopen)
-- admin: any forward step, plus reopening
+- admin: Open → In Progress or Closed, In Progress → Resolved, Resolved → Closed or In Progress (reopen). Admin cannot close an In Progress ticket without resolving it first
+- Closed is final for every role
 
 **Security choice to mention in the demo:** if a user requests a ticket they can't see, the API returns **404**, not 403, so nobody can probe which ticket IDs exist (prevents IDOR enumeration).
 

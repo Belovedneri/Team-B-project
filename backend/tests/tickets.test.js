@@ -132,6 +132,31 @@ describe('Assignment and status flow', () => {
     const change = logs.body.data.find(l => l.action === 'STATUS_CHANGE' && l.details.to === 'Closed');
     expect(change).toMatchObject({ user_id: USERS.staff1, entity_type: 'ticket', entity_id: id, details: { from: 'Resolved' } });
   });
+  test('staff can reopen a resolved ticket but not close an open one', async () => {
+    const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
+    await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
+
+    expect((await patch('staff1', 'Closed')).status).toBe(403);       // nothing to confirm yet
+    expect((await patch('support', 'In Progress')).status).toBe(200);
+    expect((await patch('support', 'Resolved')).status).toBe(200);
+    expect((await patch('staff1', 'In Progress')).status).toBe(200);  // fix didn't work: reopen
+  });
+  test('admin can close an open ticket directly', async () => {
+    const res = await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status: 'Closed' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('Closed');
+  });
+  test('admin can work, resolve, reopen and close, but not close an in-progress ticket', async () => {
+    const patch = (status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status });
+
+    expect((await patch('In Progress')).status).toBe(200);
+    expect((await patch('Closed')).status).toBe(403);       // must be resolved first
+    expect((await patch('Resolved')).status).toBe(200);
+    expect((await patch('In Progress')).status).toBe(200);  // reopen
+    expect((await patch('Resolved')).status).toBe(200);
+    expect((await patch('Closed')).status).toBe(200);
+    expect((await patch('In Progress')).status).toBe(403);  // Closed is final
+  });
 });
 
 describe('Comments', () => {
