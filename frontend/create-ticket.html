@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>Create Ticket</title>
+</head>
+<body>
+  <main class="page-container">
+    <header class="page-header">
+      <h1>Create Ticket</h1>
+      <a href="tickets.html">Back to Tickets</a>
+    </header>
+
+    <form id="create-ticket-form">
+      <div class="form-group">
+        <label for="title">Title</label>
+        <input
+          type="text"
+          id="title"
+          name="title"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea
+          id="description"
+          name="description"
+          rows="5"
+          required
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="priority">Priority</label>
+        <select id="priority" name="priority" required>
+          <option value="">Select priority</option>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+      <p id="status-message" class="status-message" role="status" hidden></p>
+
+      <button type="submit" id="submit-button">Create Ticket</button>
+    </form>
+  </main>
+
+  <script src="./js/config.js"></script>
+  <script src="./js/create-ticket.js"></script>
+</body>
+</html>
