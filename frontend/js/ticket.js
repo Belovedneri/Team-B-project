@@ -12,7 +12,12 @@ const details = document.getElementById('ticket-details');
 const commentsSection = document.getElementById('comments-section');
 const commentsMessage = document.getElementById('comments-message');
 const commentList = document.getElementById('comment-list');
+const commentForm = document.getElementById('comment-form');
+const commentBody = document.getElementById('comment-body');
+const commentError = document.getElementById('comment-error');
+const commentSubmit = document.getElementById('comment-submit');
 const ticketId = new URLSearchParams(window.location.search).get('id');
+const commentsUrl = `${API_BASE}/api/tickets/${encodeURIComponent(ticketId)}/comments`;
 
 function goToLogin() {
   sessionStorage.removeItem('token');
@@ -89,6 +94,31 @@ function renderComments(comments) {
   }
 }
 
+async function loadComments() {
+  commentError.hidden = true;
+  commentsMessage.textContent = 'Loading comments...';
+  commentsMessage.hidden = false;
+  commentList.replaceChildren();
+
+  try {
+    const comments = await fetchJson(commentsUrl);
+    if (comments === null) return false;
+
+    const commentData = Array.isArray(comments) ? comments : comments?.comments;
+    if (!Array.isArray(commentData)) {
+      throw new Error('The server returned invalid comments.');
+    }
+
+    renderComments(commentData);
+    return true;
+  } catch (err) {
+    commentsMessage.hidden = true;
+    commentError.textContent = err.message || 'Could not load comments.';
+    commentError.hidden = false;
+    return false;
+  }
+}
+
 async function fetchJson(url) {
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -128,17 +158,12 @@ async function loadTicket() {
     renderTicket(ticket);
     commentsSection.hidden = false;
 
-    const comments = Array.isArray(data.comments)
-      ? data.comments
-      : await fetchJson(`${API_BASE}/api/tickets/${encodeURIComponent(ticketId)}/comments`);
-    if (comments === null) return;
-
-    const commentData = Array.isArray(comments) ? comments : comments?.comments;
-    if (!Array.isArray(commentData)) {
-      throw new Error('The server returned invalid comments.');
+    if (Array.isArray(data.comments)) {
+      renderComments(data.comments);
+    } else {
+      await loadComments();
     }
 
-    renderComments(commentData);
     message.hidden = true;
   } catch (err) {
     message.hidden = true;
@@ -149,6 +174,48 @@ async function loadTicket() {
     showError(err.message || 'Could not load this ticket.');
   }
 }
+
+commentForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  commentError.hidden = true;
+  const body = commentBody.value.trim();
+  if (!body) {
+    commentError.textContent = 'Enter a comment before posting.';
+    commentError.hidden = false;
+    return;
+  }
+
+  commentSubmit.disabled = true;
+
+  try {
+    const response = await fetch(commentsUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ body }),
+    });
+
+    if (response.status === 401) {
+      goToLogin();
+      return;
+    }
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error?.message || 'Could not post your comment.');
+    }
+
+    commentForm.reset();
+    await loadComments();
+  } catch (err) {
+    commentError.textContent = err.message || 'Could not post your comment.';
+    commentError.hidden = false;
+  } finally {
+    commentSubmit.disabled = false;
+  }
+});
 
 if (!token || !user) {
   goToLogin();
