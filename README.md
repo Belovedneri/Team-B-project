@@ -26,6 +26,30 @@ The sample accounts (one admin, two support, three staff) are listed in the head
 - **Support:** view and update tickets assigned to them
 - **Admin:** manage users, assign tickets, view everything
 
+## API
+Every route except register and login needs `Authorization: Bearer <token>`. Ticket and audit-log routes wrap the result in `data`; register returns `{ user }` and login returns `{ token, user }`. Errors return `{ error: { message } }`.
+
+| Method | Path | Who |
+|---|---|---|
+| POST | `/api/auth/register` | anyone (always creates a staff account; sending `role` is rejected) |
+| POST | `/api/auth/login` | anyone (rate limited) |
+| POST | `/api/tickets` | staff, admin |
+| GET | `/api/tickets?status=&priority=&category=&page=&limit=` | all (staff see their own tickets, support see assigned tickets, admin see all) |
+| GET | `/api/tickets/:id` | anyone who can see the ticket |
+| PATCH | `/api/tickets/:id/status` | depends on role and current status (below) |
+| PATCH | `/api/tickets/:id/assign` | admin |
+| GET | `/api/tickets/:id/comments` | anyone who can see the ticket; oldest first, each with `user_name` and `user_role` |
+| POST | `/api/tickets/:id/comments` | anyone who can see the ticket; body `{ "body": "..." }`; 400 if the ticket is closed |
+| GET | `/api/audit-logs?action=&userId=` | admin |
+
+**Status rules** (`backend/src/services/ticketAccess.js`):
+- Support: Open → In Progress → Resolved, only on tickets assigned to them
+- Staff: Resolved → Closed (confirm the fix) or Resolved → In Progress (reopen)
+- Admin: Open → In Progress or Closed, In Progress → Resolved, Resolved → Closed or In Progress. An In Progress ticket must be resolved before it can be closed
+- Closed is final for every role. If someone else changed the status first, the update returns 409 and the page should reload the ticket
+
+A ticket the user can't see returns 404, not 403, so nobody can probe which ticket IDs exist.
+
 ## Team
 | Member | Area |
 |---|---|
