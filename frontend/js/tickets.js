@@ -64,13 +64,13 @@ function renderTickets(tickets) {
     detailLink.className = 'ticket-detail-link';
     idCell.appendChild(detailLink);
     row.appendChild(idCell);
-    const titleCell = addCell(row, ticket.title);
-    titleCell.replaceChildren();
+    const titleCell = document.createElement('td');
     const titleLink = document.createElement('a');
     titleLink.href = detailLink.href;
     titleLink.textContent = ticket.title;
     titleLink.className = 'ticket-detail-link';
     titleCell.appendChild(titleLink);
+    row.appendChild(titleCell);
     addCell(row, ticket.category);
     addBadge(row, ticket.priority);
     addBadge(row, ticket.status);
