@@ -29,8 +29,24 @@ form.addEventListener('submit', async (event) => {
       return;
     }
 
-    sessionStorage.setItem('token', data.token);
-    sessionStorage.setItem('user', JSON.stringify(data.user));
+       const token = data.token;
+       const user = data.user;
+       const validRoles = ['staff', 'support', 'admin'];
+       const looksValid =
+         typeof token === 'string' &&
+         token.split('.').length === 3 &&
+         user !== null &&
+         typeof user === 'object' &&
+         typeof user.name === 'string' &&
+         validRoles.includes(user.role);
+
+    if (!looksValid) {
+      showError('Unexpected response from the server. Please try again.');
+      return;
+    }
+
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem('user', JSON.stringify(user));
     window.location.href = 'tickets.html';
   } catch (err) {
     showError('Cannot reach the server. Check that the backend is running.');
