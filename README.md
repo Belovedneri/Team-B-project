@@ -1,14 +1,3 @@
-## API Documentation
-
-When the backend server is running locally, open
-http://localhost:3000/api-docs to view the Swagger UI.
-
-**Access and production note:** The Swagger UI endpoint is currently
-mounted without authentication or an environment-based restriction.
-Anyone who can reach the application can access the documentation.
-It is not currently disabled automatically in production. Review
-deployment security requirements before exposing it publicly.
-
 # Secure IT Helpdesk Ticketing System
 
 A web-based IT helpdesk where staff log issues, support staff resolve them within agreed timeframes (SLA), and an admin oversees everything. Security is built in from the start: bcrypt-hashed passwords, JWT authentication, role-based access control, login rate limiting, audit logging and parameterised queries.
@@ -66,12 +55,14 @@ A ticket the user can't see returns 404, not 403, so nobody can probe which tick
 ## Team
 | Member | Area |
 |---|---|
-| Philipa Amoako (team lead) | Database, authentication, frontend lead |
+| Philipa Amoako (team lead) | Database, authentication, frontend lead (register, login, ticket list) |
 | Roland Daniels | Tickets and comments API, access control, audit logging, rate limiting |
 | Sarah Baidu | SLA tracking, reports, attachments, API documentation |
 | Rosemond Pappoe | Threat model, security testing and report, security reviews |
-| Adiza | Frontend |
-| Esther Korklu Anum (from 19 Oct) | Frontend: filters, Support and Admin views, overdue indicator, admin reports page |
+| Nana Yaw Odoi-Yeboah | DevOps: CI pipeline, Docker |
+| Marvin Oppong | DevOps: Docker and environment configuration |
+| Adiza Dawud | Frontend: registration page, create-ticket form |
+| Esther Korklu Anum | Frontend: ticket detail page and comments |
 
 ## Folders
 - `/frontend`: HTML, CSS and vanilla JavaScript
@@ -80,9 +71,27 @@ A ticket the user can't see returns 404, not 403, so nobody can probe which tick
 - `/security`: threat model, test checklist, security report
 
 ## Git workflow
-All work happens on branches and goes into `main` through pull requests. Rosemond reviews any PR touching authentication, access control or file uploads.
+1. Update your local main: `git switch main`, then `git pull`.
+2. Create a branch for your task: `git switch -c feature/short-name`.
+3. Make your changes and test them. Never commit `.env` or secrets.
+4. Commit: `git add <files>`, then `git commit -m "short description"`.
+5. Push the branch: `git push -u origin feature/short-name`.
+6. Open a pull request into `main` on GitHub, add a description and a reviewer.
+7. Fix any review comments, then merge with "Create a merge commit" once it is approved and the checks pass.
 
-Known limitations
+Nobody commits directly to `main`. Rosemond reviews any PR touching authentication, access control or file uploads.
+
+## API documentation
+With the backend running, open http://localhost:3000/api-docs to see the Swagger UI.
+Note: the Swagger UI is mounted without authentication and is not disabled in production. Review deployment security requirements before exposing it publicly.
+
+## Known limitations
+- The frontend has no Support or Admin pages yet. Status changes and assignment work through the API (see /api-docs).
+- Ticket due times (SLA) and the reports endpoint are not on main yet.
+- Audit-log details are not sanitized, audit-write failures do not block login, and audit events are not yet tested end to end (AUDIT-05, AUDIT-06, AUDIT-07).
+- The development database password in docker-compose.yml is hard-coded.
+- The API URL in frontend/js/config.js is for local development only. Change it, and CORS_ORIGIN on the backend, when deploying.
+- Screenshots and a final architecture section are still to be added.
 Audit-log details are not sanitized, audit-write failures do not block login, and audit events are not yet tested end to end (AUDIT-05, AUDIT-06, AUDIT-07). Planned for Sprint 2.
 The Swagger UI has no authentication, as noted at the top of this file.
 The development database password in docker-compose.yml is hard-coded. Planned for Sprint 2.
