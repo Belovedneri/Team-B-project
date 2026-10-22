@@ -368,8 +368,13 @@ router.get('/:id/comments', validate({ params: s.idParam }), async (req, res) =>
 router.post('/:id/comments', validate({ params: s.idParam, body: s.createComment }), async (req, res) => {
   const ticket = await getVisibleTicket(req.user, req.params.id);
   if (ticket.status === 'Closed') throw new AppError(400, 'Cannot comment on a closed ticket');
+  // Same shape as the GET list, so the frontend can render it without reloading
   const { rows } = await db.query(
-    `INSERT INTO comments (ticket_id, user_id, body) VALUES ($1, $2, $3) RETURNING *`,
+    `WITH c AS (
+       INSERT INTO comments (ticket_id, user_id, body) VALUES ($1, $2, $3) RETURNING *
+     )
+     SELECT c.id, c.body, c.created_at, c.user_id, u.name AS user_name, u.role AS user_role
+     FROM c JOIN users u ON u.id = c.user_id`,
     [ticket.id, req.user.id, req.body.body]
   );
   res.status(201).json({ data: rows[0] });
