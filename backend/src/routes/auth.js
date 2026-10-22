@@ -20,6 +20,49 @@ function signToken(user) {
   });
 }
 
+
+/**
+ * @openapi
+ * /api/auth/register:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Register a staff account
+ *     description: Creates a staff account. The role is assigned by the server and cannot be supplied by the client.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *                 example: Sarah Baidu
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 maxLength: 255
+ *                 example: sarah@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 maxLength: 72
+ *                 example: SecurePass123
+ *     responses:
+ *       '201':
+ *         description: Staff account created successfully
+ *       '400':
+ *         description: Request validation failed, including an unknown field such as role
+ *       '409':
+ *         description: Email is already registered
+ */
 // Registration always creates a staff user. The role is never taken from the request.
 router.post('/register', validate({ body: registerSchema }), async (req, res, next) => {
   try {
@@ -38,6 +81,65 @@ router.post('/register', validate({ body: registerSchema }), async (req, res, ne
   }
 });
 
+
+/**
+ * @openapi
+ * /api/auth/login:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Log in to an account
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 maxLength: 255
+ *                 example: sarah@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 72
+ *                 example: SecurePass123
+ *     responses:
+ *       '200':
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: JWT bearer token
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                       enum:
+ *                         - staff
+ *                         - support
+ *                         - admin
+ *       '400':
+ *         description: Request validation failed
+ *       '401':
+ *         description: Invalid credentials or inactive account
+ */
 router.post('/login', validate({ body: loginSchema }), async (req, res, next) => {
   try {
     const { email, password } = req.body;
