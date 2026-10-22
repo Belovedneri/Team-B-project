@@ -1,0 +1,7 @@
+# DevOps owns infrastructure and CI/CD
+/.github/ @nyodoi-dev 
+/docker-compose.yml @nyodoi-dev
+
+# Security owns authentication, access control, and uploads
+/backend/controllers/authController.js @Belovedneri
+/backend/routes/uploadRoutes.js @Belovedneri 

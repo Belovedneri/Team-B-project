@@ -1,6 +1,7 @@
 const request = require('supertest');
 const { setupDb, token, auth, USERS } = require('./setup');
 const app = require('../src/app');
+const db = require('../src/config/db');
 
 const valid = { title: 'Printer jammed', description: 'Second floor printer jams on every page', category: 'Hardware', priority: 'High' };
 
@@ -93,6 +94,27 @@ describe('Assignment and status flow', () => {
     const r = await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.staff2 });
     expect(r.status).toBe(400);
   });
+  test('status change that loses a race gets 409 and is not audited', async () => {
+    await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
+    // Another request moves the ticket on after the route has read it but before its UPDATE runs
+    const query = db.query;
+    const spy = jest.spyOn(db, 'query').mockImplementation((text, params) => {
+      if (text.startsWith('UPDATE tickets SET status')) {
+        mem.public.none(`UPDATE tickets SET status = 'In Progress' WHERE id = ${id}`);
+      }
+      return query(text, params);
+    });
+    let r;
+    try {
+      r = await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.support).send({ status: 'In Progress' });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(r.status).toBe(409);
+    const logs = await request(app).get('/api/audit-logs').set('Authorization', auth.admin);
+    expect(logs.body.data.map(l => l.action)).not.toContain('STATUS_CHANGE');
+  });
   test('full flow Open → In Progress → Resolved → Closed is audited', async () => {
     const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
     await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
@@ -109,6 +131,31 @@ describe('Assignment and status flow', () => {
     expect(actions).toContain('TICKET_ASSIGNED');
     const change = logs.body.data.find(l => l.action === 'STATUS_CHANGE' && l.details.to === 'Closed');
     expect(change).toMatchObject({ user_id: USERS.staff1, entity_type: 'ticket', entity_id: id, details: { from: 'Resolved' } });
+  });
+  test('staff can reopen a resolved ticket but not close an open one', async () => {
+    const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
+    await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
+
+    expect((await patch('staff1', 'Closed')).status).toBe(403);       // nothing to confirm yet
+    expect((await patch('support', 'In Progress')).status).toBe(200);
+    expect((await patch('support', 'Resolved')).status).toBe(200);
+    expect((await patch('staff1', 'In Progress')).status).toBe(200);  // fix didn't work: reopen
+  });
+  test('admin can close an open ticket directly', async () => {
+    const res = await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status: 'Closed' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('Closed');
+  });
+  test('admin can work, resolve, reopen and close, but not close an in-progress ticket', async () => {
+    const patch = (status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status });
+
+    expect((await patch('In Progress')).status).toBe(200);
+    expect((await patch('Closed')).status).toBe(403);       // must be resolved first
+    expect((await patch('Resolved')).status).toBe(200);
+    expect((await patch('In Progress')).status).toBe(200);  // reopen
+    expect((await patch('Resolved')).status).toBe(200);
+    expect((await patch('Closed')).status).toBe(200);
+    expect((await patch('In Progress')).status).toBe(403);  // Closed is final
   });
 });
 
@@ -127,6 +174,36 @@ describe('Comments', () => {
     const id = (await create()).body.data.id;
     const r = await request(app).post(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1).send({ body: '  ' });
     expect(r.status).toBe(400);
+  });
+  test('created comment has the same shape as the list (what the ticket page renders)', async () => {
+    const id = (await create()).body.data.id;
+    const created = await request(app).post(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1).send({ body: 'Still jamming' });
+    expect(created.status).toBe(201);
+    expect(created.body.data).toMatchObject({ body: 'Still jamming', user_id: USERS.staff1, user_name: 'Staff One', user_role: 'staff' });
+    expect(created.body.data.created_at).toBeDefined();
+
+    const list = await request(app).get(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1);
+    expect(list.status).toBe(200);
+    expect(Object.keys(list.body.data[0]).sort()).toEqual(Object.keys(created.body.data).sort());
+  });
+  test('cannot comment on a closed ticket (400), but can still read its comments', async () => {
+    const id = (await create()).body.data.id;
+    await request(app).post(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1).send({ body: 'Before closing' });
+    await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status: 'Closed' });
+    const r = await request(app).post(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1).send({ body: 'After closing' });
+    expect(r.status).toBe(400);
+    expect(r.body.error.message).toBe('Cannot comment on a closed ticket');
+    const list = await request(app).get(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1);
+    expect(list.body.data.map(c => c.body)).toEqual(['Before closing']);
+  });
+  test('frontend origin passes the CORS preflight for posting a comment', async () => {
+    const origin = process.env.CORS_ORIGIN || 'http://localhost:5500';
+    const r = await request(app).options('/api/tickets/1/comments')
+      .set('Origin', origin)
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'authorization,content-type');
+    expect(r.status).toBe(204);
+    expect(r.headers['access-control-allow-origin']).toBe(origin);
   });
 });
 
