@@ -396,3 +396,19 @@ padding: 18px;
 font-size: 20px;
 }
 }
+/* Create-ticket form fields */
+#create-ticket-form textarea,
+#create-ticket-form select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  font: inherit;
+  border: 1px solid #ccd0d5;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+#create-ticket-form textarea {
+  min-height: 180px;
+  resize: vertical;
+}
