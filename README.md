@@ -1,3 +1,14 @@
+## API Documentation
+
+When the backend server is running locally, open
+http://localhost:3000/api-docs to view the Swagger UI.
+
+**Access and production note:** The Swagger UI endpoint is currently
+mounted without authentication or an environment-based restriction.
+Anyone who can reach the application can access the documentation.
+It is not currently disabled automatically in production. Review
+deployment security requirements before exposing it publicly.
+
 # Secure IT Helpdesk Ticketing System
 
 A web-based IT helpdesk where staff log issues, support staff resolve them within agreed timeframes (SLA), and an admin oversees everything. Security is built in from the start: bcrypt-hashed passwords, JWT authentication, role-based access control, login rate limiting, audit logging and parameterised queries.
@@ -47,3 +58,4 @@ All work happens on branches and goes into `main` through pull requests. Rosemon
 
 ## Still to come
 Swagger docs at `/api-docs`, screenshots and a final architecture section.
+
