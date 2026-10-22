@@ -56,6 +56,14 @@
 
     <section id="comments-section" class="comments-section" aria-labelledby="comments-heading" hidden>
       <h2 id="comments-heading">Comments</h2>
+      <form id="comment-form" class="comment-form">
+        <div class="form-group">
+          <label for="comment-body">Add a comment</label>
+          <textarea id="comment-body" name="body" rows="4" maxlength="5000" required></textarea>
+        </div>
+        <p id="comment-error" class="form-error" role="alert" hidden></p>
+        <button type="submit" id="comment-submit" class="comment-submit">Post comment</button>
+      </form>
       <p id="comments-message" class="status-message" hidden></p>
       <ol id="comment-list" class="comment-list"></ol>
     </section>
