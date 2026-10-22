@@ -57,8 +57,20 @@ function renderTickets(tickets) {
   rows.replaceChildren();
   for (const ticket of tickets) {
     const row = document.createElement('tr');
-    addCell(row, ticket.id);
-    addCell(row, ticket.title);
+    const idCell = document.createElement('td');
+    const detailLink = document.createElement('a');
+    detailLink.href = `ticket.html?id=${encodeURIComponent(ticket.id)}`;
+    detailLink.textContent = ticket.id;
+    detailLink.className = 'ticket-detail-link';
+    idCell.appendChild(detailLink);
+    row.appendChild(idCell);
+    const titleCell = document.createElement('td');
+    const titleLink = document.createElement('a');
+    titleLink.href = detailLink.href;
+    titleLink.textContent = ticket.title;
+    titleLink.className = 'ticket-detail-link';
+    titleCell.appendChild(titleLink);
+    row.appendChild(titleCell);
     addCell(row, ticket.category);
     addBadge(row, ticket.priority);
     addBadge(row, ticket.status);

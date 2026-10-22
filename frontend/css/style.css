@@ -259,3 +259,115 @@ margin-top: 0;
 .pager span {
 white-space: nowrap;
 }
+
+.ticket-detail-link {
+color: #1a56b0;
+font-weight: 600;
+}
+
+.back-link {
+display: inline-block;
+margin-bottom: 16px;
+color: #1a56b0;
+font-weight: 600;
+text-decoration: none;
+}
+
+.back-link:hover {
+text-decoration: underline;
+}
+
+.ticket-detail-card,
+.comments-section {
+background-color: #ffffff;
+border-radius: 12px;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+padding: 24px;
+margin-top: 16px;
+}
+
+.ticket-detail-heading,
+.comment-header {
+display: flex;
+justify-content: space-between;
+align-items: flex-start;
+flex-wrap: wrap;
+gap: 12px;
+}
+
+.ticket-detail-heading h2 {
+font-size: 24px;
+}
+
+.ticket-badges {
+display: flex;
+gap: 8px;
+}
+
+.ticket-meta {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+gap: 16px;
+margin: 24px 0;
+}
+
+.ticket-meta dt {
+color: #666;
+font-size: 13px;
+margin-bottom: 5px;
+}
+
+.ticket-meta dd {
+font-size: 14px;
+font-weight: 600;
+}
+
+.ticket-description {
+border-top: 1px solid #eceef1;
+padding-top: 20px;
+}
+
+.ticket-description h3,
+.comments-section h2 {
+font-size: 18px;
+margin-bottom: 12px;
+}
+
+.ticket-description p,
+.comment-card p {
+line-height: 1.6;
+white-space: pre-wrap;
+overflow-wrap: anywhere;
+}
+
+.comment-list {
+list-style: none;
+display: grid;
+gap: 12px;
+}
+
+.comment-card {
+border: 1px solid #eceef1;
+border-radius: 8px;
+padding: 16px;
+}
+
+.comment-header {
+margin-bottom: 10px;
+}
+
+.comment-header time {
+color: #666;
+font-size: 13px;
+}
+
+@media (max-width: 480px) {
+.ticket-detail-card,
+.comments-section {
+padding: 18px;
+}
+
+.ticket-detail-heading h2 {
+font-size: 20px;
+}
+}
