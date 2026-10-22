@@ -1,4 +1,6 @@
 const PAGE_SIZE = 10;
+
+class InvalidResponseError extends Error {}
 const token = sessionStorage.getItem('token');
 let user = null;
 try {
@@ -109,8 +111,25 @@ async function loadTickets() {
       return;
     }
 
-    const tickets = body.data || [];
-    const meta = body.meta || { total: tickets.length, limit: PAGE_SIZE };
+    // Validate the response shape before rendering
+    if (!body || !Array.isArray(body.data)) {
+      throw new InvalidResponseError('The server returned an invalid ticket list.');
+    }
+    const tickets = body.data;
+
+    // Validate pagination metadata; fall back to safe values if it is missing
+    let meta = { total: tickets.length, limit: PAGE_SIZE };
+    if (body.meta !== undefined && body.meta !== null) {
+      const { total, limit } = body.meta;
+      if (
+        typeof body.meta !== 'object'
+        || !Number.isInteger(total) || total < 0
+        || !Number.isInteger(limit) || limit < 1
+      ) {
+        throw new InvalidResponseError('The server returned invalid pagination information.');
+      }
+      meta = { total, limit };
+    }
     totalPages = Math.max(1, Math.ceil(meta.total / meta.limit));
 
     if (tickets.length === 0) {
@@ -127,7 +146,11 @@ async function loadTickets() {
     nextButton.disabled = currentPage >= totalPages;
   } catch (err) {
     message.hidden = true;
-    showError('Cannot reach the server. Check that the backend is running.');
+    if (err instanceof InvalidResponseError) {
+      showError(err.message);
+    } else {
+      showError('Cannot reach the server. Check that the backend is running.');
+    }
   }
 }
 
