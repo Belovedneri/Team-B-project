@@ -344,9 +344,9 @@ router.patch('/:id/status', validate({ params: s.idParam, body: s.updateStatus }
     `UPDATE tickets
  SET status = $1,
      resolved_at = CASE
-       WHEN $1 = 'Resolved' THEN now()
-       ELSE resolved_at
-     END,
+  WHEN $1 = 'Resolved' THEN now()
+  ELSE NULL
+END,
      updated_at = now()
  WHERE id = $2 AND status = $3
  RETURNING *`,

@@ -133,15 +133,50 @@ describe('Assignment and status flow', () => {
     expect(change).toMatchObject({ user_id: USERS.staff1, entity_type: 'ticket', entity_id: id, details: { from: 'Resolved' } });
   });
   test('staff can reopen a resolved ticket but not close an open one', async () => {
-    const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
-    await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
+    const patch = (who, status) =>
+      request(app).patch(`/api/tickets/${id}/status`)
+        .set('Authorization', auth[who])
+        .send({ status });
 
-    expect((await patch('staff1', 'Closed')).status).toBe(403);       // nothing to confirm yet
+    await request(app)
+      .patch(`/api/tickets/${id}/assign`)
+      .set('Authorization', auth.admin)
+      .send({ assigneeId: USERS.support });
+
+    expect((await patch('staff1', 'Closed')).status).toBe(403);
     expect((await patch('support', 'In Progress')).status).toBe(200);
     expect((await patch('support', 'Resolved')).status).toBe(200);
-    expect((await patch('staff1', 'In Progress')).status).toBe(200);  // fix didn't work: reopen
+    expect((await patch('staff1', 'In Progress')).status).toBe(200);
   });
-  test('admin can close an open ticket directly', async () => {
+
+  test('reopened overdue ticket clears resolved_at and is flagged as breached', async () => {
+    const patch = (who, status) =>
+      request(app).patch(`/api/tickets/${id}/status`)
+        .set('Authorization', auth[who])
+        .send({ status });
+
+    await request(app)
+      .patch(`/api/tickets/${id}/assign`)
+      .set('Authorization', auth.admin)
+      .send({ assigneeId: USERS.support });
+
+    expect((await patch('support', 'In Progress')).status).toBe(200);
+    expect((await patch('support', 'Resolved')).status).toBe(200);
+
+    const overdueAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    mem.public.none(
+      `UPDATE tickets SET due_at = '${overdueAt}' WHERE id = ${id}`
+    );
+
+    const reopened = await patch('staff1', 'In Progress');
+
+    expect(reopened.status).toBe(200);
+    expect(reopened.body.data.resolved_at).toBeNull();
+    expect(reopened.body.data.sla_breached).toBe(true);
+  });
+
+    const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
+    test('admin can close an open ticket directly', async () => {
     const res = await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status: 'Closed' });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('Closed');
