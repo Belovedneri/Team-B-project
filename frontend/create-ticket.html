@@ -20,6 +20,8 @@
           type="text"
           id="title"
           name="title"
+          minlength="3"
+          maxlength="150"
           required
         >
       </div>
@@ -30,8 +32,21 @@
           id="description"
           name="description"
           rows="5"
+          minlength="10"
+          maxlength="5000"
           required
         ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="category">Category</label>
+        <select id="category" name="category" required>
+          <option value="">Select category</option>
+          <option value="Hardware">Hardware</option>
+          <option value="Software">Software</option>
+          <option value="Network">Network</option>
+          <option value="Access">Access</option>
+        </select>
       </div>
 
       <div class="form-group">

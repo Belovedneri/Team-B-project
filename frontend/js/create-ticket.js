@@ -25,6 +25,7 @@ form.addEventListener('submit', async (event) => {
   const ticket = {
     title: document.getElementById('title').value.trim(),
     description: document.getElementById('description').value.trim(),
+    category: document.getElementById('category').value,
     priority: document.getElementById('priority').value
   };
 
