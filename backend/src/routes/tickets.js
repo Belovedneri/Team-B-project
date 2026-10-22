@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../config/db');
 const AppError = require('../utils/AppError');
+const { calculateDueDate, isSlaBreached } = require('../utils/sla');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const validate = require('../middleware/validate');
@@ -14,13 +15,15 @@ router.use(authenticate); // every ticket route requires a valid JWT
 // POST /api/tickets — staff (and admin) log a new issue
 router.post('/', authorize('staff', 'admin'), validate({ body: s.createTicket }), async (req, res) => {
   const { title, description, category, priority } = req.body;
-  // Sarah: compute due_at from priority here (High 4h, Medium 24h, Low 72h)
+  const dueAt = calculateDueDate(priority);
   const { rows } = await db.query(
-    `INSERT INTO tickets (title, description, category, priority, created_by)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [title, description, category, priority, req.user.id]
+    `INSERT INTO tickets (title, description, category, priority, due_at, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [title, description, category, priority, dueAt, req.user.id]
   );
-  res.status(201).json({ data: rows[0] });
+  res.status(201).json({
+    data: { ...rows[0], sla_breached: isSlaBreached(rows[0]) },
+  });
 });
 
 // GET /api/tickets?status=&priority=&category=&page=&limit=
@@ -43,13 +46,21 @@ router.get('/', validate({ query: s.listQuery }), async (req, res) => {
      ORDER BY t.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
-  res.json({ data: rows, meta: { page, limit, total: countRes.rows[0].total } });
+  res.json({
+    data: rows.map(ticket => ({
+      ...ticket,
+      sla_breached: isSlaBreached(ticket),
+    })),
+    meta: { page, limit, total: countRes.rows[0].total },
+  });
 });
 
 // GET /api/tickets/:id
 router.get('/:id', validate({ params: s.idParam }), async (req, res) => {
   const ticket = await getVisibleTicket(req.user, req.params.id);
-  res.json({ data: ticket });
+  res.json({
+    data: { ...ticket, sla_breached: isSlaBreached(ticket) },
+  });
 });
 
 // PATCH /api/tickets/:id/status — enforces the status flow per role
@@ -60,16 +71,22 @@ router.patch('/:id/status', validate({ params: s.idParam, body: s.updateStatus }
   if (!canTransition(req.user.role, ticket.status, status)) {
     throw new AppError(403, `A ${req.user.role} cannot move a ticket from ${ticket.status} to ${status}`);
   }
-  // Sarah: set resolved_at when status becomes 'Resolved'
   const { rows } = await db.query(
-    `UPDATE tickets SET status = $1, updated_at = now() WHERE id = $2 RETURNING *`,
+    `UPDATE tickets
+     SET status = $1,
+         resolved_at = CASE WHEN $1 = 'Resolved' THEN now() ELSE resolved_at END,
+         updated_at = now()
+     WHERE id = $2
+     RETURNING *`,
     [status, ticket.id]
   );
   await audit.log({
     userId: req.user.id, action: audit.ACTIONS.STATUS_CHANGE, entityType: 'ticket', entityId: ticket.id,
     details: { from: ticket.status, to: status }, ip: req.ip,
   });
-  res.json({ data: rows[0] });
+  res.json({
+    data: { ...rows[0], sla_breached: isSlaBreached(rows[0]) },
+  });
 });
 
 // PATCH /api/tickets/:id/assign — admin assigns to a support user

@@ -16,7 +16,7 @@ app.use('/api/auth/login', loginLimiter);           // must come BEFORE Philipa'
 // app.use('/api/auth', require('./routes/auth'));  // Philipa
 app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/audit-logs', require('./routes/audit'));
-// app.use('/api/reports', require('./routes/reports')); // Sarah
+app.use('/api/reports', require('./routes/reports'));
 
 app.use((req, res, next) => next(new AppError(404, 'Route not found')));
 app.use(errorHandler);
