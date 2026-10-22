@@ -41,6 +41,6 @@ The backend only allows requests from the address in `CORS_ORIGIN` (default http
 
 ## Status
 
-Done: register page, login page, ticket list (filters and paging), create-ticket form, ticket detail page showing comments.
+Done: register page, login page, ticket list (filters and paging), create-ticket form, ticket detail page with comments, and a form to add comments.
 
-Not built yet: a form to add comments from the ticket page (comments are added through the API for now), and the Support and Admin views.
+Not built yet: the Support and Admin views (staff view). Ticket due times (SLA) and reports are in a separate pull request that is still under review.
