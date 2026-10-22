@@ -99,7 +99,7 @@ describe('Assignment and status flow', () => {
     // Another request moves the ticket on after the route has read it but before its UPDATE runs
     const query = db.query;
     const spy = jest.spyOn(db, 'query').mockImplementation((text, params) => {
-      if (text.startsWith('UPDATE tickets SET status')) {
+      if (/^UPDATE tickets\s+SET status/.test(text)) {
         mem.public.none(`UPDATE tickets SET status = 'In Progress' WHERE id = ${id}`);
       }
       return query(text, params);
