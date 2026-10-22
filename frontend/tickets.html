@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>Tickets</title>
+</head>
+<body>
+  <main class="page-container">
+    <header class="page-header">
+      <h1>Tickets</h1>
+      <div class="user-box">
+        <a href="create-ticket.html" class="secondary-button">New ticket</a>
+        <span id="user-info"></span>
+        <button type="button" id="logout-button" class="secondary-button">Log out</button>
+      </div>
+    </header>
+
+    <section class="filters">
+      <div class="form-group">
+        <label for="status-filter">Status</label>
+        <select id="status-filter">
+          <option value="">All</option>
+          <option value="Open">Open</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="priority-filter">Priority</label>
+        <select id="priority-filter">
+          <option value="">All</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+    </section>
+
+    <p id="form-error" class="form-error" role="alert" hidden></p>
+    <p id="status-message" class="status-message">Loading tickets...</p>
+
+    <div class="table-wrapper">
+      <table class="ticket-table" id="ticket-table" hidden>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Due</th>
+          </tr>
+        </thead>
+        <tbody id="ticket-rows"></tbody>
+      </table>
+    </div>
+
+    <nav class="pager" id="pager" hidden>
+      <button type="button" id="prev-button" class="secondary-button">Previous</button>
+      <span id="page-info"></span>
+      <button type="button" id="next-button" class="secondary-button">Next</button>
+    </nav>
+  </main>
+
+  <script src="./js/config.js"></script>
+  <script src="./js/tickets.js"></script>
+</body>
+</html>

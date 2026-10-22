@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>Ticket details</title>
+</head>
+<body>
+  <main class="page-container">
+    <header class="page-header">
+      <h1>Ticket details</h1>
+      <div class="user-box">
+        <span id="user-info"></span>
+        <button type="button" id="logout-button" class="secondary-button">Log out</button>
+      </div>
+    </header>
+
+    <a class="back-link" href="tickets.html">Back to tickets</a>
+    <p id="form-error" class="form-error" role="alert" hidden></p>
+    <p id="status-message" class="status-message" role="status">Loading ticket...</p>
+
+    <section id="ticket-details" class="ticket-detail-card" aria-labelledby="ticket-title" hidden>
+      <div class="ticket-detail-heading">
+        <h2 id="ticket-title"></h2>
+        <div class="ticket-badges">
+          <span id="ticket-status" class="badge"></span>
+          <span id="ticket-priority" class="badge"></span>
+        </div>
+      </div>
+
+      <dl class="ticket-meta">
+        <div>
+          <dt>Ticket ID</dt>
+          <dd id="ticket-id"></dd>
+        </div>
+        <div>
+          <dt>Category</dt>
+          <dd id="ticket-category"></dd>
+        </div>
+        <div>
+          <dt>Created</dt>
+          <dd id="ticket-created"></dd>
+        </div>
+        <div>
+          <dt>Due</dt>
+          <dd id="ticket-due"></dd>
+        </div>
+      </dl>
+
+      <section class="ticket-description" aria-labelledby="description-heading">
+        <h3 id="description-heading">Description</h3>
+        <p id="ticket-description"></p>
+      </section>
+    </section>
+
+    <section id="comments-section" class="comments-section" aria-labelledby="comments-heading" hidden>
+      <h2 id="comments-heading">Comments</h2>
+      <p id="comments-message" class="status-message" hidden></p>
+      <ol id="comment-list" class="comment-list"></ol>
+    </section>
+  </main>
+
+  <script src="./js/config.js"></script>
+  <script src="./js/ticket.js"></script>
+</body>
+</html>
