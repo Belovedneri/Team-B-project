@@ -29,6 +29,8 @@ Prerequisites: Node.js 20 or newer, PostgreSQL, Git.
 4. Install the backend: `cd backend`, then `npm install`.
 5. Copy `.env.example` to `.env` and fill in `DATABASE_URL` and `JWT_SECRET` (a long random string). Never commit `.env`.
 6. Start the API with `npm start`. Run the tests with `npm test`.
+7. Run the frontend: serve the frontend folder at http://localhost:5500 (for example with VS Code Live Server) and open http://localhost:5500/login.html. Use localhost, not 127.0.0.1, because the API only allows requests from http://localhost:5500.
+   Docker alternative: see DEVOPS.md.
 
 The sample accounts (one admin, two support, three staff) are listed in the header of `database/seed.sql`.
 
@@ -80,6 +82,8 @@ A ticket the user can't see returns 404, not 403, so nobody can probe which tick
 ## Git workflow
 All work happens on branches and goes into `main` through pull requests. Rosemond reviews any PR touching authentication, access control or file uploads.
 
-## Still to come
-Swagger docs at `/api-docs`, screenshots and a final architecture section.
-
+Known limitations
+Audit-log details are not sanitized, audit-write failures do not block login, and audit events are not yet tested end to end (AUDIT-05, AUDIT-06, AUDIT-07). Planned for Sprint 2.
+The Swagger UI has no authentication, as noted at the top of this file.
+The development database password in docker-compose.yml is hard-coded. Planned for Sprint 2.
+Screenshots and a final architecture section are still to be added.
