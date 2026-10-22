@@ -35,6 +35,7 @@ form.addEventListener('submit', async (event) => {
        const looksValid =
          typeof token === 'string' &&
          token.split('.').length === 3 &&
+         token.split('.').every((part) => part.length > 0) &&
          user !== null &&
          typeof user === 'object' &&
          typeof user.name === 'string' &&
