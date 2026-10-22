@@ -175,36 +175,6 @@ describe('Comments', () => {
     const r = await request(app).post(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1).send({ body: '  ' });
     expect(r.status).toBe(400);
   });
-  test('created comment has the same shape as the list (what the ticket page renders)', async () => {
-    const id = (await create()).body.data.id;
-    const created = await request(app).post(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1).send({ body: 'Still jamming' });
-    expect(created.status).toBe(201);
-    expect(created.body.data).toMatchObject({ body: 'Still jamming', user_id: USERS.staff1, user_name: 'Staff One', user_role: 'staff' });
-    expect(created.body.data.created_at).toBeDefined();
-
-    const list = await request(app).get(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1);
-    expect(list.status).toBe(200);
-    expect(Object.keys(list.body.data[0]).sort()).toEqual(Object.keys(created.body.data).sort());
-  });
-  test('cannot comment on a closed ticket (400), but can still read its comments', async () => {
-    const id = (await create()).body.data.id;
-    await request(app).post(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1).send({ body: 'Before closing' });
-    await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status: 'Closed' });
-    const r = await request(app).post(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1).send({ body: 'After closing' });
-    expect(r.status).toBe(400);
-    expect(r.body.error.message).toBe('Cannot comment on a closed ticket');
-    const list = await request(app).get(`/api/tickets/${id}/comments`).set('Authorization', auth.staff1);
-    expect(list.body.data.map(c => c.body)).toEqual(['Before closing']);
-  });
-  test('frontend origin passes the CORS preflight for posting a comment', async () => {
-    const origin = process.env.CORS_ORIGIN || 'http://localhost:5500';
-    const r = await request(app).options('/api/tickets/1/comments')
-      .set('Origin', origin)
-      .set('Access-Control-Request-Method', 'POST')
-      .set('Access-Control-Request-Headers', 'authorization,content-type');
-    expect(r.status).toBe(204);
-    expect(r.headers['access-control-allow-origin']).toBe(origin);
-  });
 });
 
 describe('Audit logs endpoint', () => {

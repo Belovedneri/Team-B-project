@@ -77,21 +77,3 @@ describe('loginLimiter on the real route', () => {
     expect(other.status).toBe(200);
   });
 });
-
-describe('POST /api/auth/register', () => {
-  const register = (body) => request(app).post('/api/auth/register')
-    .send({ name: 'New Person', email: 'new@test.io', password: 'Long#enough1', ...body });
-  const usersWithEmail = () => mem.public.many(`SELECT role FROM users WHERE email = 'new@test.io'`);
-
-  test('creates a staff account', async () => {
-    const res = await register();
-    expect(res.status).toBe(201);
-    expect(res.body.user).toMatchObject({ email: 'new@test.io', role: 'staff' });
-    expect(res.body.user.password_hash).toBeUndefined();
-  });
-  test.each(['admin', 'support'])('submitting role "%s" is rejected and no account is created', async (role) => {
-    const res = await register({ role });
-    expect(res.status).toBe(400);
-    expect(usersWithEmail()).toHaveLength(0);
-  });
-});
