@@ -1,6 +1,7 @@
 const request = require('supertest');
 const { setupDb, token, auth, USERS } = require('./setup');
 const app = require('../src/app');
+const db = require('../src/config/db');
 
 const valid = { title: 'Printer jammed', description: 'Second floor printer jams on every page', category: 'Hardware', priority: 'High' };
 
@@ -93,6 +94,27 @@ describe('Assignment and status flow', () => {
     const r = await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.staff2 });
     expect(r.status).toBe(400);
   });
+  test('status change that loses a race gets 409 and is not audited', async () => {
+    await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
+    // Another request moves the ticket on after the route has read it but before its UPDATE runs
+    const query = db.query;
+    const spy = jest.spyOn(db, 'query').mockImplementation((text, params) => {
+      if (text.startsWith('UPDATE tickets SET status')) {
+        mem.public.none(`UPDATE tickets SET status = 'In Progress' WHERE id = ${id}`);
+      }
+      return query(text, params);
+    });
+    let r;
+    try {
+      r = await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.support).send({ status: 'In Progress' });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(r.status).toBe(409);
+    const logs = await request(app).get('/api/audit-logs').set('Authorization', auth.admin);
+    expect(logs.body.data.map(l => l.action)).not.toContain('STATUS_CHANGE');
+  });
   test('full flow Open → In Progress → Resolved → Closed is audited', async () => {
     const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
     await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
@@ -109,6 +131,31 @@ describe('Assignment and status flow', () => {
     expect(actions).toContain('TICKET_ASSIGNED');
     const change = logs.body.data.find(l => l.action === 'STATUS_CHANGE' && l.details.to === 'Closed');
     expect(change).toMatchObject({ user_id: USERS.staff1, entity_type: 'ticket', entity_id: id, details: { from: 'Resolved' } });
+  });
+  test('staff can reopen a resolved ticket but not close an open one', async () => {
+    const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
+    await request(app).patch(`/api/tickets/${id}/assign`).set('Authorization', auth.admin).send({ assigneeId: USERS.support });
+
+    expect((await patch('staff1', 'Closed')).status).toBe(403);       // nothing to confirm yet
+    expect((await patch('support', 'In Progress')).status).toBe(200);
+    expect((await patch('support', 'Resolved')).status).toBe(200);
+    expect((await patch('staff1', 'In Progress')).status).toBe(200);  // fix didn't work: reopen
+  });
+  test('admin can close an open ticket directly', async () => {
+    const res = await request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status: 'Closed' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('Closed');
+  });
+  test('admin can work, resolve, reopen and close, but not close an in-progress ticket', async () => {
+    const patch = (status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth.admin).send({ status });
+
+    expect((await patch('In Progress')).status).toBe(200);
+    expect((await patch('Closed')).status).toBe(403);       // must be resolved first
+    expect((await patch('Resolved')).status).toBe(200);
+    expect((await patch('In Progress')).status).toBe(200);  // reopen
+    expect((await patch('Resolved')).status).toBe(200);
+    expect((await patch('Closed')).status).toBe(200);
+    expect((await patch('In Progress')).status).toBe(403);  // Closed is final
   });
 });
 

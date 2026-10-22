@@ -319,10 +319,12 @@ router.patch('/:id/status', validate({ params: s.idParam, body: s.updateStatus }
     throw new AppError(403, `A ${req.user.role} cannot move a ticket from ${ticket.status} to ${status}`);
   }
   // Sarah: set resolved_at when status becomes 'Resolved'
+  // Only update if the status is still what we checked above, so two concurrent changes can't both win
   const { rows } = await db.query(
-    `UPDATE tickets SET status = $1, updated_at = now() WHERE id = $2 RETURNING *`,
-    [status, ticket.id]
+    `UPDATE tickets SET status = $1, updated_at = now() WHERE id = $2 AND status = $3 RETURNING *`,
+    [status, ticket.id, ticket.status]
   );
+  if (!rows[0]) throw new AppError(409, 'Ticket status was changed by someone else. Reload and try again');
   await audit.log({
     userId: req.user.id, action: audit.ACTIONS.STATUS_CHANGE, entityType: 'ticket', entityId: ticket.id,
     details: { from: ticket.status, to: status }, ip: req.ip,

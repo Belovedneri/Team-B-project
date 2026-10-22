@@ -37,7 +37,8 @@ Not yours, but you depend on them: Philipa (DB, auth, JWT), Sarah (SLA fields, a
 **Status rules** (`src/services/ticketAccess.js`):
 - support: Open → In Progress → Resolved (only on tickets assigned to them)
 - staff: Resolved → Closed (confirm the fix), or Resolved → In Progress (reopen)
-- admin: any forward step, plus reopening
+- admin: Open → In Progress or Closed, In Progress → Resolved, Resolved → Closed or In Progress (reopen). Admin cannot close an In Progress ticket without resolving it first
+- Closed is final for every role
 
 **Security choice to mention in the demo:** if a user requests a ticket they can't see, the API returns **404**, not 403, so nobody can probe which ticket IDs exist (prevents IDOR enumeration).
 
@@ -45,12 +46,12 @@ Not yours, but you depend on them: Philipa (DB, auth, JWT), Sarah (SLA fields, a
 
 ### Today (Tue 13 Oct)
 1. **Agree contracts with Philipa** (15 minutes, before writing anything):
-   - JWT payload is `{ sub: userId, role }`, signed with HS256 and `JWT_SECRET`.
+   - JWT payload is `{ sub: String(userId), role }`, signed with HS256 and `JWT_SECRET`. `authenticate` re-checks the user on every request: deleted or deactivated (`is_active = false`) accounts get 401, and the role always comes from the database, so a role change takes effect on the next request.
    - `database/schema.sql` is the single source of truth. Roles are lowercase (`staff/support/admin`); status, priority and category are Title Case (`Open`, `In Progress`, `High`, `Hardware`).
    - Audit actions are `LOGIN`, `LOGIN_FAILED`, `ROLE_CHANGE`, `TICKET_ASSIGNED`, `STATUS_CHANGE`.
    - She calls `audit.log(...)` on login success, login failure and role changes (see `src/services/audit.js`).
 2. Create the branch `feature/tickets-api`, then copy this code into `/backend`.
-3. Run `npm install` and `npm test`. All 20 tests should pass. The tests load `database/schema.sql` into pg-mem (minus the `updated_at` trigger, which pg-mem can't run).
+3. Run `npm install` and `npm test`. All tests should pass. The tests load `database/schema.sql` into pg-mem (minus the `updated_at` trigger, which pg-mem can't run).
 
 ### Wed 14 Oct
 4. Point `.env` at the team database, run Philipa's seed, and test with Postman/Thunder Client using a real login token.
