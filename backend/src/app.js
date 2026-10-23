@@ -19,7 +19,7 @@ app.use('/api/auth', require('./routes/auth'));  // Philipa
 app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/tickets', require('./routes/attachments')); // Sarah
 app.use('/api/audit-logs', require('./routes/audit'));
-// app.use('/api/reports', require('./routes/reports')); // Sarah
+app.use('/api/reports', require('./routes/reports')); // Sarah
 
 // Swagger API documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
