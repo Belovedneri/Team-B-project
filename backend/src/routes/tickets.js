@@ -341,12 +341,13 @@ router.patch('/:id/status', validate({ params: s.idParam, body: s.updateStatus }
   // Sarah: set resolved_at when status becomes 'Resolved'
   // Only update if the status is still what we checked above, so two concurrent changes can't both win
   const { rows } = await db.query(
-    `UPDATE tickets
+      `UPDATE tickets
  SET status = $1,
      resolved_at = CASE
-  WHEN $1 = 'Resolved' THEN now()
-  ELSE NULL
-END,
+       WHEN $1 = 'Resolved' THEN now()
+       WHEN $1 = 'Closed' THEN resolved_at
+       ELSE NULL
+     END,
      updated_at = now()
  WHERE id = $2 AND status = $3
  RETURNING *`,

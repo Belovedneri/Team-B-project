@@ -174,6 +174,31 @@ describe('Assignment and status flow', () => {
     expect(reopened.body.data.resolved_at).toBeNull();
     expect(reopened.body.data.sla_breached).toBe(true);
   });
+  test('closing a resolved ticket preserves resolved_at', async () => {
+    const patch = (who, status) =>
+      request(app)
+        .patch(`/api/tickets/${id}/status`)
+        .set('Authorization', auth[who])
+        .send({ status });
+
+    await request(app)
+      .patch(`/api/tickets/${id}/assign`)
+      .set('Authorization', auth.admin)
+      .send({ assigneeId: USERS.support });
+
+    expect((await patch('support', 'In Progress')).status).toBe(200);
+
+    const resolved = await patch('support', 'Resolved');
+    expect(resolved.status).toBe(200);
+    expect(resolved.body.data.resolved_at).not.toBeNull();
+
+    const originalResolvedAt = resolved.body.data.resolved_at;
+
+    const closed = await patch('staff1', 'Closed');
+
+    expect(closed.status).toBe(200);
+    expect(closed.body.data.resolved_at).toBe(originalResolvedAt);
+  });
 
     const patch = (who, status) => request(app).patch(`/api/tickets/${id}/status`).set('Authorization', auth[who]).send({ status });
     test('admin can close an open ticket directly', async () => {
