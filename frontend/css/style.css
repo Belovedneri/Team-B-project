@@ -412,3 +412,9 @@ font-size: 20px;
   min-height: 180px;
   resize: vertical;
 }
+
+#create-ticket-form select {
+  width: 260px;
+  max-width: 100%;
+  padding: 8px 12px;
+}
